@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "createModel": "node src/mathDegree1MachineLearning/createModelAndSave.js",
+    "continueToLearnModel": "node src/mathDegree1MachineLearning/loadModelAndContinueLearning.js",
+    "useModel": "node src/mathDegree1MachineLearning/loadModelAndUse.js"
   },
   "keywords": [],
   "author": "",

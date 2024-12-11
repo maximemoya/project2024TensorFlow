@@ -1,4 +1,4 @@
-const tf = require('@tensorflow/tfjs-node');
+import * as tf from '@tensorflow/tfjs-node';
 
 // Create a simple model
 const model = tf.sequential();

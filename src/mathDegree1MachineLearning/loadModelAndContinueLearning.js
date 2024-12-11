@@ -1,4 +1,4 @@
-const tf = require('@tensorflow/tfjs-node');
+import * as tf from '@tensorflow/tfjs-node';
 
 // Load the model
 tf.loadLayersModel('file://./my-model/model.json').then(model => {
