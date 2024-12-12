@@ -156,6 +156,21 @@ class Database {
         });
     }
 
+    async deleteModel(modelId) {
+        try {
+            // Supprimer les labels associés au modèle
+            await this.db.run('DELETE FROM labels WHERE model_id = ?', modelId);
+            
+            // Supprimer le modèle lui-même
+            await this.db.run('DELETE FROM models WHERE id = ?', modelId);
+            
+            return true;
+        } catch (error) {
+            console.error('Erreur lors de la suppression du modèle de la base de données:', error);
+            throw error;
+        }
+    }
+
     // Labels
     async createLabel(modelId, name) {
         return new Promise((resolve, reject) => {

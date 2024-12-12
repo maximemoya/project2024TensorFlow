@@ -144,6 +144,7 @@
     <script>
         // État global
         let currentUser = null;
+        let currentModelId = null;
 
         // Vérifier l'authentification au chargement de la page
         async function checkAuth() {
@@ -367,6 +368,10 @@
                                 title="${labels.length < 2 ? 'Entraînez au moins 2 catégories' : 'Faire une prédiction'}">
                                 Prédire
                             </button>
+                            <button onclick="deleteModel(${model.id})" 
+                                class="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">
+                                Supprimer
+                            </button>
                         </div>
                         <div class="prediction-display hidden mt-4"></div>
                     </div>
@@ -419,17 +424,18 @@
                     }
 
                     // Afficher le résultat de la prédiction sur la carte
-                    const predictionResult = result.prediction;
+                    const predictions = result.prediction;
                     const modelCard = document.getElementById(`model-card-${modelId}`);
                     const predictionDisplay = modelCard.querySelector('.prediction-display');
                     
+                    // Les prédictions sont déjà triées
                     const resultHtml = `
                         <div class="bg-white border border-gray-200 rounded-lg p-4">
-                            <h4 class="text-lg font-semibold mb-2">Top 3 Prédictions :</h4>
-                            ${predictionResult.allPredictions.map((pred, index) => `
-                                <div class="flex justify-between items-center mb-2 ${index < 2 ? 'border-b pb-2' : ''}">
+                            <h4 class="text-lg font-semibold mb-2">Prédictions :</h4>
+                            ${predictions.map((pred, index) => `
+                                <div class="flex justify-between items-center mb-2 ${index < predictions.length - 1 ? 'border-b pb-2' : ''}">
                                     <span class="text-gray-700">${index + 1}. ${pred.label}</span>
-                                    <span class="text-blue-600 font-medium">${pred.confidence}</span>
+                                    <span class="text-blue-600 font-medium">${pred.confidence.toFixed(1)}%</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -457,6 +463,12 @@
             try {
                 console.log('Début de l\'entraînement:', { modelId, formData: Object.fromEntries(formData) });
                 
+                // Vérifier que le label est présent
+                const label = formData.get('label');
+                if (!label) {
+                    throw new Error('Le label est requis pour l\'entraînement');
+                }
+
                 const response = await fetch(`/api/models/${modelId}/train`, {
                     method: 'POST',
                     body: formData
@@ -477,6 +489,36 @@
                 showMessage('Entraînement réussi !', 'success');
             } catch (error) {
                 console.error('Erreur lors de l\'entraînement:', error);
+                showMessage(error.message, 'error');
+            }
+        }
+
+        async function deleteModel(modelId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce modèle ? Cette action est irréversible.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/models/${modelId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la suppression du modèle');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    showMessage('Modèle supprimé avec succès', 'success');
+                    // Réinitialiser l'interface
+                    await loadModels();
+                } else {
+                    throw new Error(result.error || 'Erreur lors de la suppression du modèle');
+                }
+            } catch (error) {
                 showMessage(error.message, 'error');
             }
         }
