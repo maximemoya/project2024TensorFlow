@@ -8,6 +8,7 @@ interface TrainingSet {
   images: string[];
   createdAt: string;
   updatedAt: string;
+  isSelected: boolean;
 }
 
 interface CreateTrainingSetData {
@@ -19,6 +20,7 @@ export function useTrainingSet() {
   const auth = useAuth();
   const token = auth?.token;
   const [trainingSets, setTrainingSets] = useState<TrainingSet[]>([]);
+  const [selectedSet, setSelectedSet] = useState<TrainingSet | null>(null);
   const [selectedSets, setSelectedSets] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +34,8 @@ export function useTrainingSet() {
     }
 
     try {
+      setLoading(true);
+      setError(null);
       const response = await fetch('/api/training-sets', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -44,8 +48,14 @@ export function useTrainingSet() {
 
       const data = await response.json();
       setTrainingSets(data);
+      const selected = data.find((set: TrainingSet) => set.isSelected);
+      setSelectedSet(selected || null);
+      // Initialize selectedSets with any pre-selected sets
+      setSelectedSets(new Set(data.filter((set: TrainingSet) => set.isSelected).map((set: TrainingSet) => set.id)));
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error fetching training sets:', err);
+      setError(err.message || 'Failed to fetch training sets');
+      setTrainingSets([]);
     } finally {
       setLoading(false);
     }
@@ -105,23 +115,15 @@ export function useTrainingSet() {
     }
   };
 
-  // Toggle selection of a training set
-  const toggleTrainingSetSelection = async (id: string) => {
+  // Select a training set
+  const selectTrainingSet = async (id: string) => {
     if (!token) {
       setError('No authentication token found');
       return;
     }
 
     try {
-      const newSelectedSets = new Set(selectedSets);
-      if (newSelectedSets.has(id)) {
-        newSelectedSets.delete(id);
-      } else {
-        newSelectedSets.add(id);
-      }
-      setSelectedSets(newSelectedSets);
-
-      // You can also update the backend if needed
+      setError(null);
       const response = await fetch(`/api/training-sets/${id}/select`, {
         method: 'POST',
         headers: {
@@ -130,10 +132,40 @@ export function useTrainingSet() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update training set selection');
+        throw new Error('Failed to select training set');
       }
+
+      const updatedSet = await response.json();
+      
+      // Get the current selection state of the set
+      const currentSet = trainingSets.find(set => set.id === id);
+      const willBeSelected = currentSet ? !currentSet.isSelected : true;
+      
+      // Update training sets state
+      setTrainingSets(prev =>
+        prev.map(set => ({
+          ...set,
+          isSelected: set.id === id ? willBeSelected : set.isSelected
+        }))
+      );
+
+      // Update selected set
+      setSelectedSet(updatedSet);
+      
+      // Update selectedSets to match isSelected state
+      setSelectedSets(prev => {
+        const newSet = new Set(prev);
+        if (willBeSelected) {
+          newSet.add(id);
+        } else {
+          newSet.delete(id);
+        }
+        return newSet;
+      });
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error selecting training set:', err);
+      setError(err.message || 'Failed to select training set');
+      throw err;
     }
   };
 
@@ -145,11 +177,13 @@ export function useTrainingSet() {
 
   return {
     trainingSets,
+    selectedSet,
     selectedSets,
     loading,
     error,
     createTrainingSet,
     deleteTrainingSet,
-    toggleTrainingSetSelection,
+    selectTrainingSet,
+    refreshTrainingSets: fetchTrainingSets,
   };
 }

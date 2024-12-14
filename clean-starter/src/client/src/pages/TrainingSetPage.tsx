@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTrainingSet } from '../hooks/useTrainingSet';
+import { useTrainingSet } from '../hooks/useTrainingSet.ts';
 
 function TrainingSetPage() {
   const {
@@ -9,7 +9,7 @@ function TrainingSetPage() {
     error,
     createTrainingSet,
     deleteTrainingSet,
-    toggleTrainingSetSelection,
+    selectTrainingSet,
   } = useTrainingSet();
 
   const [newSetName, setNewSetName] = useState('');
@@ -168,7 +168,7 @@ function TrainingSetPage() {
             </p>
             <div className="flex justify-between items-center">
               <button
-                onClick={() => toggleTrainingSetSelection(set.id)}
+                onClick={() => selectTrainingSet(set.id)}
                 className={`px-4 py-2 rounded ${
                   selectedSets.has(set.id)
                     ? 'bg-red-500 hover:bg-red-600 text-white'
