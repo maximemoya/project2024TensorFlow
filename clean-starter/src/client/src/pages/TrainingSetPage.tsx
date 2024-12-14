@@ -4,12 +4,12 @@ import { useTrainingSet } from '../hooks/useTrainingSet';
 function TrainingSetPage() {
   const {
     trainingSets,
-    selectedSet,
+    selectedSets,
     loading,
     error,
     createTrainingSet,
     deleteTrainingSet,
-    selectTrainingSet,
+    toggleTrainingSetSelection,
   } = useTrainingSet();
 
   const [newSetName, setNewSetName] = useState('');
@@ -24,45 +24,32 @@ function TrainingSetPage() {
     setCreateError(null);
     setUploadProgress(0);
 
+    if (!newSetName.trim()) {
+      setCreateError('Please provide a name for the training set');
+      return;
+    }
+
     if (!selectedFiles || selectedFiles.length === 0) {
       setCreateError('Please select at least one file');
       return;
     }
 
     try {
-      const formData = new FormData();
-      formData.append('name', newSetName);
-      formData.append('description', newSetDescription);
-      
-      // Append all selected files
-      for (let i = 0; i < selectedFiles.length; i++) {
-        formData.append('images', selectedFiles[i]);
-      }
-
-      const response = await fetch('/api/training-sets', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create training set');
-      }
-
+      // First create the training set
       await createTrainingSet({
         name: newSetName,
-        description: newSetDescription,
+        description: newSetDescription
       });
 
+      // TODO: Add file upload logic here after training set is created
+
+      // Reset form
       setNewSetName('');
       setNewSetDescription('');
       setSelectedFiles(null);
-      setIsCreating(false);
-      setUploadProgress(100);
-    } catch (err: any) {
-      setCreateError(err.message || 'Failed to create training set');
+      setUploadProgress(0);
+    } catch (error: any) {
+      setCreateError(error.message);
     }
   };
 
@@ -165,32 +152,34 @@ function TrainingSetPage() {
         {trainingSets.map((set) => (
           <div
             key={set.id}
-            className={`p-6 rounded-lg shadow-md ${
-              set.isSelected ? 'bg-blue-50 border-2 border-blue-500' : 'bg-white'
+            className={`p-6 rounded-lg shadow-md relative ${
+              selectedSets.has(set.id) ? 'bg-green-50 border-2 border-green-500' : 'bg-white'
             }`}
           >
+            {selectedSets.has(set.id) && (
+              <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-sm">
+                Selected
+              </div>
+            )}
             <h3 className="text-xl font-semibold mb-2">{set.name}</h3>
             {set.description && <p className="text-gray-600 mb-4">{set.description}</p>}
             <p className="text-sm text-gray-500 mb-4">
               Created: {new Date(set.createdAt).toLocaleDateString()}
             </p>
-            <p className="text-sm text-gray-500 mb-4">Path: {set.dataPath}</p>
-            
-            <div className="flex space-x-2">
+            <div className="flex justify-between items-center">
               <button
-                onClick={() => selectTrainingSet(set.id)}
+                onClick={() => toggleTrainingSetSelection(set.id)}
                 className={`px-4 py-2 rounded ${
-                  set.isSelected
-                    ? 'bg-blue-200 text-blue-800'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                  selectedSets.has(set.id)
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                    : 'bg-green-500 hover:bg-green-600 text-white'
                 }`}
-                disabled={set.isSelected}
               >
-                {set.isSelected ? 'Selected' : 'Select'}
+                {selectedSets.has(set.id) ? 'Deselect' : 'Select'}
               </button>
               <button
                 onClick={() => deleteTrainingSet(set.id)}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                className="text-red-500 hover:text-red-700"
               >
                 Delete
               </button>

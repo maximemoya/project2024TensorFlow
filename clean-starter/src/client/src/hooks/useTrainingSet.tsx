@@ -19,7 +19,7 @@ export function useTrainingSet() {
   const auth = useAuth();
   const token = auth?.token;
   const [trainingSets, setTrainingSets] = useState<TrainingSet[]>([]);
-  const [selectedSet, setSelectedSet] = useState<TrainingSet | null>(null);
+  const [selectedSets, setSelectedSets] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,22 +97,31 @@ export function useTrainingSet() {
       }
 
       await fetchTrainingSets();
-      if (selectedSet?.id === id) {
-        setSelectedSet(null);
-      }
+      const newSelectedSets = new Set(selectedSets);
+      newSelectedSets.delete(id);
+      setSelectedSets(newSelectedSets);
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  // Select a training set
-  const selectTrainingSet = async (id: string) => {
+  // Toggle selection of a training set
+  const toggleTrainingSetSelection = async (id: string) => {
     if (!token) {
       setError('No authentication token found');
       return;
     }
 
     try {
+      const newSelectedSets = new Set(selectedSets);
+      if (newSelectedSets.has(id)) {
+        newSelectedSets.delete(id);
+      } else {
+        newSelectedSets.add(id);
+      }
+      setSelectedSets(newSelectedSets);
+
+      // You can also update the backend if needed
       const response = await fetch(`/api/training-sets/${id}/select`, {
         method: 'POST',
         headers: {
@@ -121,12 +130,7 @@ export function useTrainingSet() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to select training set');
-      }
-
-      const selectedTrainingSet = trainingSets.find(set => set.id === id);
-      if (selectedTrainingSet) {
-        setSelectedSet(selectedTrainingSet);
+        throw new Error('Failed to update training set selection');
       }
     } catch (err: any) {
       setError(err.message);
@@ -141,11 +145,11 @@ export function useTrainingSet() {
 
   return {
     trainingSets,
-    selectedSet,
+    selectedSets,
     loading,
     error,
     createTrainingSet,
     deleteTrainingSet,
-    selectTrainingSet,
+    toggleTrainingSetSelection,
   };
 }
