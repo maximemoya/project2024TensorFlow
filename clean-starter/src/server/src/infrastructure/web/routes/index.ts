@@ -5,6 +5,7 @@ import { TimeService } from '../../../core/application/time.service';
 import { createAuthRouter } from './auth.routes';
 import { createTrainingSetRoutes } from './training-set.routes';
 import { createTimeRouter } from './time.routes';
+import modelRoutes from '../../../routes/model.routes';
 
 export const createApiRouter = (
   authService: AuthService,
@@ -17,6 +18,7 @@ export const createApiRouter = (
   router.use('/auth', createAuthRouter(authService));
   router.use('/training-sets', createTrainingSetRoutes(trainingSetService));
   router.use('/time', createTimeRouter(timeService));
+  router.use('/models', modelRoutes);
 
   return router;
 };

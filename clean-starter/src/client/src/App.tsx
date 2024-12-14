@@ -5,6 +5,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import LobbyPage from './pages/LobbyPage';
 import TrainingSetPage from './pages/TrainingSetPage';
+import ModelPage from './pages/ModelPage';
+import CreateModelPage from './pages/CreateModelPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const queryClient = new QueryClient();
@@ -30,6 +32,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <TrainingSetPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/models"
+              element={
+                <ProtectedRoute>
+                  <ModelPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/models/create"
+              element={
+                <ProtectedRoute>
+                  <CreateModelPage />
                 </ProtectedRoute>
               }
             />

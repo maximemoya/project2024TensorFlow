@@ -91,9 +91,6 @@ export function useTrainingSet() {
         }))
       );
 
-      // Update selected set
-      setSelectedSet(response.data);
-      
       // Update selectedSets to match isSelected state
       setSelectedSets(prev => {
         const newSet = new Set(prev);
@@ -104,6 +101,8 @@ export function useTrainingSet() {
         }
         return newSet;
       });
+
+      return response.data;
     } catch (err: any) {
       console.error('Error selecting training set:', err);
       setError(err.response?.data?.error || 'Failed to select training set');
@@ -124,6 +123,6 @@ export function useTrainingSet() {
     createTrainingSet,
     deleteTrainingSet,
     selectTrainingSet,
-    refreshTrainingSets: fetchTrainingSets,
+    fetchTrainingSets
   };
 }

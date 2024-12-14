@@ -32,6 +32,13 @@ function LobbyPage() {
                 >
                   Manage Training Sets
                 </Link>
+
+                <Link 
+                  to="/models"
+                  className="block w-full bg-green-500 text-white text-center py-2 px-4 rounded hover:bg-green-600 transition-colors mt-4"
+                >
+                  Manage Models
+                </Link>
                 
                 <button
                   onClick={logout}

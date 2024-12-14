@@ -139,17 +139,13 @@ export class TrainingSetService {
         throw new AppError('Training set not found', 404);
       }
 
-      // Unselect all other training sets
-      await this.prisma.trainingSet.updateMany({
-        where: { userId },
-        data: { isSelected: false }
-      });
-
-      // Select the current training set
+      // Toggle the selection state of the current training set
       return await this.prisma.trainingSet.update({
         where: { id },
-        data: { isSelected: true },
-        include: { images: true }
+        data: { isSelected: !trainingSet.isSelected },
+        include: {
+          images: true,
+        },
       });
     } catch (error) {
       console.error('Error selecting training set:', error);

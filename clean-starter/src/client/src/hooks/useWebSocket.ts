@@ -12,7 +12,7 @@ export const useWebSocket = () => {
   const [serverTime, setServerTime] = useState<ServerTime | null>(null);
 
   const connect = useCallback(() => {
-    const wsUrl = `ws://${window.location.hostname}:3000`;
+    const wsUrl = `ws://localhost:3000`;
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {

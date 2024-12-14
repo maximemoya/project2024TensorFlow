@@ -15,8 +15,8 @@ function RegisterPage() {
     try {
       await register(email, password, name);
       navigate('/lobby');
-    } catch (err) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
