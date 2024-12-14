@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.env
+
+# Ne pas ignorer le dossier data
+!data/
+# Mais ignorer les fichiers de test dans data
+data/*.test.sqlite

@@ -1,5 +1,6 @@
 import { useAuth } from '../hooks/useAuth';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { Link } from 'react-router-dom';
 
 function LobbyPage() {
   const { user, logout } = useAuth();
@@ -24,9 +25,17 @@ function LobbyPage() {
                     <p><span className="font-semibold">Server Time:</span> {formatTime(serverTime.time)}</p>
                   )}
                 </div>
+                
+                <Link 
+                  to="/training-sets"
+                  className="block w-full bg-blue-500 text-white text-center py-2 px-4 rounded hover:bg-blue-600 transition-colors mt-4"
+                >
+                  Manage Training Sets
+                </Link>
+                
                 <button
                   onClick={logout}
-                  className="mt-8 w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition-colors"
+                  className="mt-4 w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition-colors"
                 >
                   Logout
                 </button>

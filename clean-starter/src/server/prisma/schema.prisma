@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = "file:../data/db.sqlite"
 }
 
 model User {
@@ -14,4 +14,29 @@ model User {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  trainingSets TrainingSet[]
+}
+
+model TrainingSet {
+  id          String @id @default(uuid())
+  name        String
+  description String?
+  isSelected  Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  images      TrainingImage[]
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model TrainingImage {
+  id            String @id @default(uuid())
+  filename      String
+  originalName  String
+  path          String
+  mimetype      String
+  size          Int
+  createdAt     DateTime @default(now())
+  trainingSetId String
+  trainingSet   TrainingSet @relation(fields: [trainingSetId], references: [id])
 }

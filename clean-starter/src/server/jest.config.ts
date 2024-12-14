@@ -10,6 +10,7 @@ const config: Config.InitialOptions = {
     '^@infrastructure/(.*)$': '<rootDir>/src/infrastructure/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
+  maxWorkers: 1, // Run tests sequentially
 }
 
 export default config;

@@ -4,6 +4,7 @@ import { AuthProvider } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import LobbyPage from './pages/LobbyPage';
+import TrainingSetPage from './pages/TrainingSetPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const queryClient = new QueryClient();
@@ -21,6 +22,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <LobbyPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/training-sets"
+              element={
+                <ProtectedRoute>
+                  <TrainingSetPage />
                 </ProtectedRoute>
               }
             />

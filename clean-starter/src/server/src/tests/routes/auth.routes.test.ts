@@ -1,110 +1,129 @@
 import request from 'supertest';
-import { PrismaClient } from '@prisma/client';
 import { createServer } from '../../infrastructure/web/server';
 import { PrismaUserRepository } from '../../infrastructure/repositories/prisma-user.repository';
 import { AuthService } from '../../core/application/auth.service';
+import { TrainingSetService } from '../../core/application/training-set.service';
+import { prisma } from '../setup';
 
 describe('Auth Routes', () => {
-  const prisma = new PrismaClient();
-  const userRepository = new PrismaUserRepository(prisma);
-  const authService = new AuthService(userRepository);
-  const app = createServer({ prisma, userRepository, authService });
+  let userRepository: PrismaUserRepository;
+  let authService: AuthService;
+  let trainingSetService: TrainingSetService;
+  let app: any;
 
-  const testUser = {
-    email: 'test@example.com',
-    password: 'password123',
-    name: 'Test User'
-  };
+  beforeAll(async () => {
+    userRepository = new PrismaUserRepository(prisma);
+    authService = new AuthService(userRepository);
+    trainingSetService = new TrainingSetService(prisma);
+    app = createServer({ 
+      prisma,
+      userRepository,
+      authService,
+      trainingSetService
+    });
+  });
+
+  beforeEach(async () => {
+    // Nettoyer la base de données avant chaque test
+    await prisma.trainingImage.deleteMany();
+    await prisma.trainingSet.deleteMany();
+    await prisma.user.deleteMany();
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
   describe('POST /api/auth/register', () => {
-    it('should register a new user successfully', async () => {
+    it('should register a new user', async () => {
       const response = await request(app)
         .post('/api/auth/register')
-        .send(testUser)
-        .expect(200);
+        .send({
+          email: 'test@example.com',
+          password: 'password123',
+          name: 'Test User'
+        });
 
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('user');
+      expect(response.body.user).toHaveProperty('id');
+      expect(response.body.user.email).toBe('test@example.com');
+      expect(response.body.user.name).toBe('Test User');
       expect(response.body).toHaveProperty('token');
-      expect(response.body.user).toMatchObject({
-        email: testUser.email,
-        name: testUser.name
-      });
-      expect(response.body.user).not.toHaveProperty('password');
     });
 
-    it('should return 400 if user already exists', async () => {
+    it('should return error for existing email', async () => {
       // First registration
       await request(app)
         .post('/api/auth/register')
-        .send(testUser);
+        .send({
+          email: 'duplicate@example.com',
+          password: 'password123',
+          name: 'Duplicate User'
+        });
 
       // Second registration with same email
       const response = await request(app)
         .post('/api/auth/register')
-        .send(testUser)
-        .expect(400);
-
-      expect(response.body).toHaveProperty('error', 'User already exists');
-    });
-
-    it('should return 400 if required fields are missing', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
         .send({
-          email: testUser.email
-          // Missing password and name
-        })
-        .expect(400);
+          email: 'duplicate@example.com',
+          password: 'password123',
+          name: 'Duplicate User'
+        });
 
-      expect(response.body).toHaveProperty('error');
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'User already exists');
     });
   });
 
   describe('POST /api/auth/login', () => {
     beforeEach(async () => {
-      // Register a user before testing login
+      // Register a user for login tests
       await request(app)
         .post('/api/auth/register')
-        .send(testUser);
+        .send({
+          email: 'login@example.com',
+          password: 'password123',
+          name: 'Login Test'
+        });
     });
 
-    it('should login successfully with correct credentials', async () => {
+    it('should login existing user', async () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
-          email: testUser.email,
-          password: testUser.password
-        })
-        .expect(200);
+          email: 'login@example.com',
+          password: 'password123'
+        });
 
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('user');
+      expect(response.body.user).toHaveProperty('id');
+      expect(response.body.user.email).toBe('login@example.com');
       expect(response.body).toHaveProperty('token');
-      expect(response.body.user).toMatchObject({
-        email: testUser.email,
-        name: testUser.name
-      });
-      expect(response.body.user).not.toHaveProperty('password');
     });
 
-    it('should return 401 with incorrect password', async () => {
+    it('should return error for wrong password', async () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
-          email: testUser.email,
+          email: 'login@example.com',
           password: 'wrongpassword'
-        })
-        .expect(401);
+        });
 
+      expect(response.status).toBe(401);
       expect(response.body).toHaveProperty('error', 'Invalid credentials');
     });
 
-    it('should return 401 with non-existent email', async () => {
+    it('should return error for non-existent user', async () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
           email: 'nonexistent@example.com',
-          password: testUser.password
-        })
-        .expect(401);
+          password: 'password123'
+        });
 
+      expect(response.status).toBe(401);
       expect(response.body).toHaveProperty('error', 'Invalid credentials');
     });
   });

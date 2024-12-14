@@ -1,36 +1,49 @@
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import { createServer as createHttpServer } from 'http';
 import { PrismaClient } from '@prisma/client';
+import { UserRepository } from '../../core/domain/user';
 import { PrismaUserRepository } from '../repositories/prisma-user.repository';
 import { AuthService } from '../../core/application/auth.service';
+import { TrainingSetService } from '../../core/application/training-set.service';
 import { TimeService } from '../../core/application/time.service';
-import { WebSocketHandler } from './websocket/websocket.handler';
 import { createApiRouter } from './routes';
+import { errorHandler } from './middleware/error.middleware';
+import { WebSocketHandler } from './websocket/websocket.handler';
 import path from 'path';
 
 interface ServerDependencies {
   prisma: PrismaClient;
-  userRepository: PrismaUserRepository;
-  authService: AuthService;
-  timeService: TimeService;
+  userRepository: UserRepository;
+  authService?: AuthService;
+  trainingSetService?: TrainingSetService;
+  timeService?: TimeService;
 }
 
-export const createServer = ({ 
-  prisma, 
-  userRepository, 
-  authService,
-  timeService 
-}: ServerDependencies) => {
+export const createServer = ({
+  prisma,
+  userRepository,
+  authService: providedAuthService,
+  trainingSetService: providedTrainingSetService,
+  timeService: providedTimeService,
+}: ServerDependencies): Express => {
   const app = express();
-  
+
   // Middleware
   app.use(cors());
   app.use(express.json());
 
+  // Services
+  const authService = providedAuthService || new AuthService(userRepository);
+  const trainingSetService = providedTrainingSetService || new TrainingSetService(prisma);
+  const timeService = providedTimeService || new TimeService();
+
   // API Routes
-  app.use('/api', createApiRouter(authService));
+  app.use('/api', createApiRouter(authService, trainingSetService, timeService));
+
+  // Error handling
+  app.use(errorHandler);
 
   // Serve static files in production
   if (process.env.NODE_ENV === 'production') {
@@ -43,22 +56,24 @@ export const createServer = ({
   return app;
 };
 
+export const createWebSocketServer = (server: any, timeService: TimeService) => {
+  const wss = new WebSocketServer({ server });
+  const wsHandler = new WebSocketHandler(wss, timeService);
+  return wsHandler;
+};
+
 // Only if this file is run directly
 if (require.main === module) {
   const prisma = new PrismaClient();
   const userRepository = new PrismaUserRepository(prisma);
-  const authService = new AuthService(userRepository);
   const timeService = new TimeService();
-
-  const app = createServer({ prisma, userRepository, authService, timeService });
+  const app = createServer({ prisma, userRepository, timeService });
+  const port = process.env.PORT || 3000;
   const server = createHttpServer(app);
-  const wss = new WebSocketServer({ server });
+  
+  createWebSocketServer(server, timeService);
 
-  // Initialize WebSocket handler
-  new WebSocketHandler(wss, timeService);
-
-  const PORT = process.env.PORT || 3000;
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  server.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
   });
 }
