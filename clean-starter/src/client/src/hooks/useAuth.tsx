@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { z } from 'zod';
 
@@ -12,6 +12,7 @@ type User = z.infer<typeof UserSchema>;
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
@@ -35,6 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem('token');
+  });
+
   const login = async (email: string, password: string) => {
     try {
       const response = await axios.post('/api/auth/login', { email, password });
@@ -43,7 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('user', JSON.stringify(user));
       setupAxiosInterceptors(token);
       setUser(user);
-    } catch (error) {
+      setToken(token);
+    } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Login failed');
     }
   };
@@ -56,7 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('user', JSON.stringify(user));
       setupAxiosInterceptors(token);
       setUser(user);
-    } catch (error) {
+      setToken(token);
+    } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Registration failed');
     }
   };
@@ -66,6 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('user');
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
+    setToken(null);
+  };
+
+  const value = {
+    user,
+    token,
+    login,
+    register,
+    logout,
   };
 
   // Setup axios interceptor for 401 responses
@@ -85,11 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

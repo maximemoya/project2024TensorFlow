@@ -14,25 +14,61 @@ function TrainingSetPage() {
 
   const [newSetName, setNewSetName] = useState('');
   const [newSetDescription, setNewSetDescription] = useState('');
-  const [newSetDataPath, setNewSetDataPath] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError(null);
+    setUploadProgress(0);
+
+    if (!selectedFiles || selectedFiles.length === 0) {
+      setCreateError('Please select at least one file');
+      return;
+    }
+
     try {
+      const formData = new FormData();
+      formData.append('name', newSetName);
+      formData.append('description', newSetDescription);
+      
+      // Append all selected files
+      for (let i = 0; i < selectedFiles.length; i++) {
+        formData.append('images', selectedFiles[i]);
+      }
+
+      const response = await fetch('/api/training-sets', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create training set');
+      }
+
       await createTrainingSet({
         name: newSetName,
         description: newSetDescription,
-        dataPath: newSetDataPath,
       });
+
       setNewSetName('');
       setNewSetDescription('');
-      setNewSetDataPath('');
+      setSelectedFiles(null);
       setIsCreating(false);
+      setUploadProgress(100);
     } catch (err: any) {
       setCreateError(err.message || 'Failed to create training set');
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFiles(e.target.files);
     }
   };
 
@@ -88,15 +124,30 @@ function TrainingSetPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Data Path</label>
+              <label className="block text-sm font-medium text-gray-700">Images</label>
               <input
-                type="text"
-                value={newSetDataPath}
-                onChange={(e) => setNewSetDataPath(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                type="file"
+                onChange={handleFileChange}
+                className="mt-1 block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+                multiple
+                accept="image/*"
                 required
-                placeholder="/path/to/your/training/data"
               />
+              {uploadProgress > 0 && (
+                <div className="mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="bg-blue-600 h-2.5 rounded-full" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
