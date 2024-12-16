@@ -1,6 +1,8 @@
 import express from 'express';
 import { z } from 'zod';
 import { ModelService } from '../services/model.service';
+import upload from '../middleware/upload';
+import { requestLogger } from '../middleware/requestLogger';
 
 const router = express.Router();
 
@@ -54,8 +56,8 @@ const createModelSchema = z.object({
   layers: z.array(layerSchema).min(1),
 });
 
-const trainingConfigSchema = z.object({
-  trainingSetIds: z.array(z.string()).min(1),
+const trainModelSchema = z.object({
+  trainingSetIds: z.array(z.string()),
   epochs: z.number().int().positive(),
   batchSize: z.number().int().positive(),
 });
@@ -68,7 +70,10 @@ const predictInputSchema = z.object({
 router.post('/', async (req, res) => {
   try {
     const modelConfig = createModelSchema.parse(req.body);
-    const model = await ModelService.createModel(modelConfig);
+    const model = await ModelService.createModel({
+      ...modelConfig,
+      status: 'PENDING',
+    });
     res.status(201).json(model);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -103,16 +108,15 @@ router.get('/:id', async (req, res) => {
 
 router.post('/:id/train', async (req, res) => {
   try {
-    const trainingConfig = trainingConfigSchema.parse(req.body);
-    const result = await ModelService.trainModel(req.params.id, trainingConfig);
+    const { id } = req.params;
+    const config = trainModelSchema.parse(req.body);
+    const result = await ModelService.trainModel(id, config);
     res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({ error: error.errors });
-    } else if (error instanceof Error && error.message === 'Model not found') {
-      res.status(404).json({ error: 'Model not found' });
+      res.status(400).json({ error: 'Invalid training configuration' });
     } else {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Failed to train model' });
     }
   }
 });
@@ -130,6 +134,51 @@ router.post('/:id/predict', async (req, res) => {
     } else {
       res.status(500).json({ error: 'Internal server error' });
     }
+  }
+});
+
+router.post('/:id/predict-image', requestLogger, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    const modelId = req.params.id;
+    console.log('Processing image for model:', modelId);
+    console.log('File details:', {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
+
+    const prediction = await ModelService.predictImage(modelId, req.file.buffer);
+    console.log('Prediction result:', prediction);
+
+    res.json({
+      prediction: {
+        class: prediction.class,
+        trainingSet: prediction.trainingSet
+      }
+    });
+  } catch (error) {
+    console.error('Prediction error:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Failed to get prediction' 
+    });
+  }
+});
+
+router.post('/:id/reset', async (req, res) => {
+  try {
+    const model = await ModelService.resetModel(req.params.id);
+    if (!model) {
+      res.status(404).json({ error: 'Model not found' });
+      return;
+    }
+    res.json(model);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to reset model' });
   }
 });
 

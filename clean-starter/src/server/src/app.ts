@@ -2,8 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import modelRoutes from './routes/model.routes';
+import { createTrainingSetRoutes } from './infrastructure/web/routes/training-set.routes';
+import { TrainingSetService } from './core/application/training-set.service';
+import { PrismaClient } from '@prisma/client';
 
 const app = express();
+const prisma = new PrismaClient();
 
 // Middleware
 app.use(cors());
@@ -17,6 +21,7 @@ app.use(express.static(clientDistPath));
 
 // API Routes
 app.use('/api/models', modelRoutes);
+app.use('/api/training-sets', createTrainingSetRoutes(new TrainingSetService(prisma)));
 
 // Handle React routing, return all requests to React app
 app.get('*', (req, res) => {

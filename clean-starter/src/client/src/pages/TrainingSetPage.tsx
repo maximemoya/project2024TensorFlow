@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useTrainingSet } from '../hooks/useTrainingSet.ts';
+import React, { useState, useCallback } from 'react';
+import { useTrainingSet } from '../hooks/useTrainingSet';
+import { config } from '../config';
 
 function TrainingSetPage() {
   const {
@@ -19,6 +20,38 @@ function TrainingSetPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  const validateFiles = useCallback((files: FileList): string | null => {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check file type
+      if (!config.ALLOWED_FILE_TYPES.includes(file.type)) {
+        return `File "${file.name}" has an unsupported type. Allowed types: ${config.ALLOWED_FILE_TYPES.join(', ')}`;
+      }
+      
+      // Check file size
+      if (file.size > config.MAX_FILE_SIZE) {
+        return `File "${file.name}" is too large. Maximum size is ${config.MAX_FILE_SIZE / 1024 / 1024}MB`;
+      }
+    }
+    return null;
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const error = validateFiles(files);
+    if (error) {
+      setCreateError(error);
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    setSelectedFiles(files);
+    setCreateError(null);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError(null);
@@ -35,27 +68,42 @@ function TrainingSetPage() {
     }
 
     try {
-      // First create the training set
-      await createTrainingSet({
+      setIsCreating(true);
+
+      // Create training set
+      const trainingSet = await createTrainingSet({
         name: newSetName,
         description: newSetDescription
       });
 
-      // TODO: Add file upload logic here after training set is created
+      // Upload files
+      const formData = new FormData();
+      for (let i = 0; i < selectedFiles.length; i++) {
+        formData.append('images', selectedFiles[i]);
+      }
+
+      await fetch(`${config.API_URL}/training-sets/${trainingSet.id}/images`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
 
       // Reset form
       setNewSetName('');
       setNewSetDescription('');
       setSelectedFiles(null);
       setUploadProgress(0);
-    } catch (error: any) {
-      setCreateError(error.message);
-    }
-  };
+      
+      // Reset file input
+      const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+      if (fileInput) fileInput.value = '';
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFiles(e.target.files);
+    } catch (error: any) {
+      setCreateError(error.message || 'Failed to create training set');
+    } finally {
+      setIsCreating(false);
     }
   };
 

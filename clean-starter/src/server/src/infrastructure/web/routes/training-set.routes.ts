@@ -118,6 +118,34 @@ export const createTrainingSetRoutes = (trainingSetService: TrainingSetService) 
     }
   });
 
+  // Récupérer un training set par ID
+  router.get('/:id', AuthMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
+
+      const trainingSet = await trainingSetService.getTrainingSetById(id, userId);
+      if (!trainingSet) {
+        throw new AppError('Training set not found', 404);
+      }
+
+      res.status(200).json(trainingSet);
+    } catch (error) {
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else if (error instanceof Error && error.message === 'Training set not found') {
+        res.status(404).json({ error: 'Training set not found' });
+      } else {
+        console.error('Error getting training set:', error);
+        res.status(500).json({ error: 'Failed to get training set' });
+      }
+    }
+  });
+
   // Sélectionner un training set
   router.post('/:id/select', AuthMiddleware, async (req, res) => {
     try {

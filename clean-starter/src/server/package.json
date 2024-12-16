@@ -13,6 +13,7 @@
     "@tensorflow/tfjs-node": "^4.22.0",
     "@types/bcrypt": "^5.0.2",
     "@types/multer": "^1.4.12",
+    "@types/sharp": "^0.31.1",
     "@types/uuid": "^10.0.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
@@ -20,6 +21,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.5",
     "uuid": "^11.0.3",
     "ws": "^8.15.1",
     "zod": "^3.24.1"
